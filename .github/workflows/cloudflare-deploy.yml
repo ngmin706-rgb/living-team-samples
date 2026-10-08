@@ -1,0 +1,35 @@
+name: Publish OH&HA sample library
+on:
+  push:
+    branches: [main]
+    paths: [index.html, .github/workflows/cloudflare-deploy.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cloudflare-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check publishing connection
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "Add CLOUDFLARE_API_TOKEN to this repository's Actions secrets to enable automatic publishing."
+            exit 1
+          fi
+      - name: Prepare site
+        run: |
+          mkdir -p site
+          cp index.html site/index.html
+      - name: Publish to existing Cloudflare site
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 7e4bedc544ee160d3c41bd773f479b23
+          command: pages deploy site --project-name=ohha-sample1 --branch=main
