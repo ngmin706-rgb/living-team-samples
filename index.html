@@ -56,13 +56,22 @@ async function fetchSheet(config){
 async function refresh(){if(busy)return;busy=true;$('refresh').disabled=true;const results=await Promise.allSettled(configs.map(fetchSheet));const failed=results.filter(r=>r.status==='rejected');const sheets=results.map((r,i)=>r.status==='fulfilled'?r.value:(data?.sheets.find(s=>s.name===configs[i].name)||null)).filter(Boolean);if(!sheets.length){error(failed[0]?.reason||new Error('시트 연결 실패'));return}receive({sheets,fetchedAt:new Date().toISOString()});if(failed.length){failures++;$('sync').textContent='일부 시트 갱신 실패';$('notice').textContent=failed.map(r=>r.reason.message).join(' · ')+' 마지막으로 받은 데이터는 유지합니다.';schedule()}}
 function receive(payload){busy=false;$('refresh').disabled=false;data=payload;lastListSync=Date.now();applyPhotos();failures=0;$('notice').textContent=payload.preview?'화면 미리보기 · 실제 시트의 저장된 사본입니다. 자동 갱신은 배포 후 연결됩니다.':'';$('sync').textContent=payload.preview?'시트 사본 미리보기':'동기화 완료 · '+new Date(payload.fetchedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});$('footnote').textContent=payload.preview?'미리보기 · 자동 갱신 대기':'목록·사진 30분마다 갱신';render();if($('detail').open)openDetail(detailId);schedule()}
 function error(err){busy=false;$('refresh').disabled=false;failures++;$('sync').textContent='연결 확인 필요';$('notice').textContent=(data?'갱신에 실패했습니다. 마지막으로 받은 목록을 표시합니다. ':'목록을 불러오지 못했습니다. ')+(err?.message||'잠시 후 다시 시도해 주세요.');if(!data)$('list').innerHTML='<div class="empty">회사 구글 계정과 시트 접근 권한을<br>확인한 후 새로고침해 주세요.</div>';schedule()}
+function dateSortKey(value) {
+  const text=String(value??'').trim();
+  const match=text.match(/^(\d{4})(?:\s*(?:[-./]|년)\s*(\d{1,2})(?:\s*(?:[-./]|월)\s*(\d{1,2}))?)?\s*(?:일|월|년|\.)?\s*$/);
+  if(!match)return -1;
+  const year=Number(match[1]),month=match[2]?Number(match[2]):0,day=match[3]?Number(match[3]):0;
+  if(year<1900||year>9999||month>12||(match[2]&&month<1)||(match[3]&&(day<1||day>new Date(Date.UTC(year,month,0)).getUTCDate())))return -1;
+  return year*10000+month*100+day;
+}
+
 function render(){
  $('tabs').innerHTML=names.map(n=>'<button type="button" role="tab" aria-selected="'+(selected===n)+'" data-sheet="'+n+'">'+n+'</button>').join('');
  const s=active();if(!s){$('list').innerHTML='<div class="empty">이 시트를 찾을 수 없습니다.</div>';return}
  const boxes=[...new Set(s.rows.map(r=>r.values[0]).filter(Boolean))];
  $('hero-label').textContent=selected+'의 샘플';$('total').innerHTML=s.rows.length+'<span>개 품목</span>';$('hero-meta').textContent=boxes.length+'개 박스 · '+s.rows.reduce((sum,r)=>sum+(Number(r.values[7])||0),0)+'개 수량';$('list-title').textContent=selected;
  const q=$('query').value.trim().toLocaleLowerCase();shown=s.rows.filter(r=>(!q||r.values.some(v=>String(v).toLocaleLowerCase().includes(q))));
- if($('sort').value==='name')shown.sort((a,b)=>a.values[4].localeCompare(b.values[4],'ko'));if($('sort').value==='date')shown.sort((a,b)=>(Date.parse(b.values[8])||0)-(Date.parse(a.values[8])||0));
+ if($('sort').value==='name')shown.sort((a,b)=>a.values[4].localeCompare(b.values[4],'ko'));if($('sort').value==='date')shown.sort((a,b)=>dateSortKey(b.values[8])-dateSortKey(a.values[8]));
  $('result').textContent=shown.length+'개 품목';$('list').innerHTML=shown.length?shown.map(sampleCard).join(''):'<div class="empty">'+(s.rows.length?'검색 조건에 맞는 샘플이 없습니다.':'아직 등록된 샘플이 없습니다.<br>시트에 추가하면 이곳에 표시됩니다.')+'</div>';
  $('source').href=SHEET_URL+'#gid='+s.gid;
  $('list').querySelectorAll('img').forEach(img=>img.onerror=()=>{img.parentElement.innerHTML='<span class="placeholder">▱</span>'});
