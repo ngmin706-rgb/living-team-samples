@@ -2,7 +2,9 @@ name: Publish OH&HA sample library
 on:
   push:
     branches: [main]
-    paths: [index.html, .github/workflows/cloudflare-deploy.yml]
+    paths: [index.html, build_photos.py, .github/workflows/cloudflare-deploy.yml]
+  schedule:
+    - cron: "13,43 * * * *"
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,7 +14,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
@@ -27,6 +29,10 @@ jobs:
         run: |
           mkdir -p site
           cp index.html site/index.html
+      - name: Install image tools
+        run: python -m pip install openpyxl Pillow
+      - name: Prepare compressed spreadsheet photos
+        run: python build_photos.py site
       - name: Publish to existing Cloudflare site
         uses: cloudflare/wrangler-action@v4
         with:
