@@ -26,7 +26,7 @@ def main():
             time.sleep(5)
     photos={}
     for sheet in book:
-        name=sheet.title.replace('[','').replace(']','')
+        name=next((label for label in NAMES if label in sheet.title), None)
         if name not in NAMES: continue
         for image in sheet._images:
             anchor=getattr(image.anchor,'_from',None)
