@@ -80,7 +80,7 @@ function openDetail(id){const s=active(),r=s?.rows.find(r=>r.id===id);if(!r){if(
 
 let photosBusy=false,photoError='',photoIndex=new Map(),photoTimer=null,lastPhotoSync=0;
 const photoKey=v=>[v[0],v[1],v[4],v[5],v[9]].map(x=>String(x??'').replace(/\s+/g,' ').trim()).join('|');
-function applyPhotos(){if(!data)return;for(const sheet of data.sheets){const counts=new Map();for(const row of sheet.rows){const key=photoKey(row.values);const occurrence=(counts.get(key)||0)+1;counts.set(key,occurrence);const picture=photoIndex.get(sheet.name+'|'+key+'|occ:'+occurrence);if(picture)row.image=picture;else if(row.image&&!validImage(row.values[6]))row.image=''}}}
+function applyPhotos(){if(!data)return;for(const sheet of data.sheets){const counts=new Map();for(const row of sheet.rows){const key=photoKey(row.values);const occurrence=(counts.get(key)||0)+1;counts.set(key,occurrence);const picture=photoIndex.get(sheet.name+'|'+key+'|occ:'+occurrence)||photoIndex.get('*|'+key+'|occ:'+occurrence);if(picture)row.image=picture;else if(row.image&&!validImage(row.values[6]))row.image=''}}}
 async function loadPhotos(force=false){
  if(photosBusy||document.hidden)return;
  if(!force&&Date.now()-lastPhotoSync<86400000)return;
