@@ -15,7 +15,7 @@ header{position:relative;padding-right:106px;min-height:132px}.brand-logo{positi
 <section class="hero"><div class="hero-label" id="hero-label">통합시트의 샘플</div><div class="big" id="total">—<span>개 품목</span></div><div class="hero-meta" id="hero-meta">목록을 불러오고 있습니다</div><div class="hero-art" aria-hidden="true">▱</div></section>
 <div class="controls"><label class="search"><span aria-hidden="true">⌕</span><input id="query" type="search" placeholder="제품명, 박스 번호, 스타일 번호 검색" aria-label="샘플 검색"></label><nav class="tabs" id="tabs" role="tablist" aria-label="샘플 시트"></nav><div class="filters"><select id="sort" aria-label="정렬"><option value="date">최근 날짜순</option><option value="name">제품명순</option></select></div></div>
 <div class="list-head"><strong id="list-title">통합시트</strong><span id="result" aria-live="polite"></span></div><div id="list" class="list"></div>
-<footer><span id="footnote">목록·사진 30분마다 갱신</span><a id="source" target="_blank" rel="noopener">원본 시트 ↗</a></footer>
+<footer><span id="footnote">사진 자동 동기화 · 하루 1회</span><a id="source" target="_blank" rel="noopener">원본 시트 ↗</a></footer>
 <dialog id="admin" aria-labelledby="admin-title"><button class="close" type="button" aria-label="관리자 팝업 닫기">×</button><span class="badge">관리자</span><h2 id="admin-title">동기화 관리</h2><p class="admin-description">사진 자동 동기화는 매일 오전 9시 13분에 실행됩니다. 실행 시각은 조금 늦어질 수 있습니다.</p><div class="admin-refresh"><p id="image-status" class="image-status" aria-live="polite">사진 업데이트 확인 중…</p><button id="refresh" type="button">↻ 새로고침</button></div><a class="sheet-link" href="https://github.com/ngmin706-rgb/living-team-samples/actions/workflows/cloudflare-deploy.yml" target="_blank" rel="noopener noreferrer">최신 동기화·게시 실행 ↗</a><p class="admin-description">GitHub에 관리자 계정으로 로그인한 뒤 ‘Run workflow’를 누르세요. 시트의 사진을 처리하고 사이트를 다시 게시합니다. 완료 후 위의 새로고침을 누르면 반영된 사진을 확인할 수 있습니다.</p></dialog></main>
 <dialog id="detail"><button class="close" aria-label="상세 닫기">×</button><span class="badge" id="detail-type"></span><h2 id="detail-name"></h2><div id="detail-photo"></div><dl id="detail-fields"></dl><p id="detail-note"></p><a class="sheet-link" id="detail-source" target="_blank" rel="noopener">시트에서 이 샘플 보기 ↗</a></dialog>
 <script>/*!
@@ -42,7 +42,7 @@ function thumbnail(r){return validImage(r.image)?'<img loading="lazy" src="'+esc
 function fact(label,value){return '<div class="fact"><span class="fact-label">'+label+'</span><span class="fact-value">'+esc(value||'미등록')+'</span></div>'}
 function sampleCard(r){return '<button class="card" data-id="'+esc(r.id)+'" aria-label="'+esc(r.values[4])+' 상세 보기"><div class="sample-top"><div class="thumb">'+thumbnail(r)+'</div><div class="info"><span class="badge">샘플타입 · '+esc(r.values[9]||selected)+'</span><div class="name">'+esc(r.values[4]||'이름 없는 샘플')+'</div><div class="meta">'+esc(r.values[5]||'스타일 번호 미등록')+'</div></div></div><div class="facts">'+fact('BOX No.',r.values[0])+fact('공장 / 국가',r.values[3])+fact('수량',r.values[7]?r.values[7]+'개':'')+fact('날짜',r.values[8])+'</div></button>'}
 function active(){return data?.sheets.find(s=>s.name===selected)}
-function schedule(){clearTimeout(timer);if(!document.hidden&&!window.SAMPLE_PREVIEW)timer=setTimeout(refresh,Math.max(1000,1800000-(Date.now()-lastListSync)))}
+function schedule(){clearTimeout(timer);if(!document.hidden&&!window.SAMPLE_PREVIEW)timer=setTimeout(refresh,Math.max(1000,86400000-(Date.now()-lastListSync)))}
 
 const configs=[{name:'통합시트',gid:292589099},{name:'수납샘플',gid:198237226},{name:'개발샘플',gid:1596067340},{name:'공장샘플',gid:1270164123},{name:'구매샘플',gid:2047566751}];
 const headers=['Box No.','바코드번호','분류','공장/국가','제품명','스타일번호','이미지','수량','날짜','샘플타입','비고'];
@@ -83,7 +83,7 @@ const photoKey=v=>[v[0],v[1],v[4],v[5],v[9]].map(x=>String(x??'').replace(/\s+/g
 function applyPhotos(){if(!data)return;for(const sheet of data.sheets)for(const row of sheet.rows){const picture=photoIndex.get(sheet.name+'|'+photoKey(row.values))||photoIndex.get('*|'+photoKey(row.values));if(picture)row.image=picture}}
 async function loadPhotos(force=false){
  if(photosBusy||document.hidden)return;
- if(!force&&Date.now()-lastPhotoSync<1800000)return;
+ if(!force&&Date.now()-lastPhotoSync<86400000)return;
  photosBusy=true;$('image-status').textContent='최신 사진을 확인하고 있습니다…';
  try{
  const base=location.protocol==='file:'?'https://ohha-sample1.pages.dev/':location.href;
@@ -100,12 +100,12 @@ async function loadPhotos(force=false){
  $('image-status').textContent='사진 업데이트 · '+new Date(payload.updatedAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
  if($('detail').open)openDetail(detailId);
  }catch(e){photoError=e.message;$('image-status').textContent='사진 연결을 확인해 주세요. 저장된 사진을 표시합니다.'}
- finally{photosBusy=false;clearTimeout(photoTimer);photoTimer=setTimeout(()=>loadPhotos(true),1800000)}
+ finally{photosBusy=false;clearTimeout(photoTimer);photoTimer=setTimeout(()=>loadPhotos(true),86400000)}
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimeout(photoTimer);else loadPhotos()});
 
 $('sync-admin').onclick=()=>$('admin').showModal();$('admin').querySelector('.close').onclick=()=>$('admin').close();
 $('tabs').onclick=e=>{const b=e.target.closest('[data-sheet]');if(b&&data){selected=b.dataset.sheet;render()}};
 $('list').onclick=e=>{const b=e.target.closest('[data-id]');if(b)openDetail(b.dataset.id)};
-$('query').oninput=()=>{if(data)render()};$('sort').onchange=()=>{if(data)render()};$('refresh').onclick=()=>{refresh();loadPhotos(true)};$('detail').querySelector('.close').onclick=()=>$('detail').close();$('detail').onclick=e=>{if(e.target===$('detail')&&e.offsetX<0)$('detail').close()};document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimeout(timer);else if(Date.now()-lastListSync>=1800000)refresh();else schedule()});refresh();loadPhotos();
+$('query').oninput=()=>{if(data)render()};$('sort').onchange=()=>{if(data)render()};$('refresh').onclick=()=>{refresh();loadPhotos(true)};$('detail').querySelector('.close').onclick=()=>$('detail').close();$('detail').onclick=e=>{if(e.target===$('detail')&&e.offsetX<0)$('detail').close()};document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimeout(timer);else if(Date.now()-lastListSync>=86400000)refresh();else schedule()});refresh();loadPhotos();
 </script></body></html>
