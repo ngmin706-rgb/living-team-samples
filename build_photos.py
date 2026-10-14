@@ -28,6 +28,14 @@ def main():
     for sheet in book:
         name=next((label for label in NAMES if label in sheet.title), None)
         if name not in NAMES: continue
+        counts={}; row_keys={}
+        for row_number in range(2, sheet.max_row+1):
+            values=[sheet.cell(row_number,i+1).value for i in range(11)]
+            if not any(str(v or '').strip() for v in values[:6]) and not str(values[10] or '').strip():
+                continue
+            identity=key(values)
+            counts[identity]=counts.get(identity,0)+1
+            row_keys[row_number]=identity+'|occ:'+str(counts[identity])
         for image in sheet._images:
             anchor=getattr(image.anchor,'_from',None)
             if anchor is None or anchor.col!=6: continue
@@ -40,8 +48,8 @@ def main():
             jpeg=encoded.getvalue();filename=hashlib.sha256(jpeg).hexdigest()[:24]+'.jpg'
             (DEST/'photos'/filename).write_bytes(jpeg)
             src='photos/'+filename
-            photos[name+'|'+key(values)]=src
-            if name=='통합시트': photos['*|'+key(values)]=src
+            row_key=row_keys.get(anchor.row+1)
+            if row_key: photos[name+'|'+row_key]=src
     if not photos: raise RuntimeError('No spreadsheet photos extracted; keeping previous deployed site unchanged.')
     result={'updatedAt':datetime.now(timezone.utc).isoformat(),'photos':photos}
     (DEST/'photos.json').write_text(json.dumps(result,ensure_ascii=False),encoding='utf-8')
