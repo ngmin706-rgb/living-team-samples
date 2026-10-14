@@ -49,7 +49,9 @@ def main():
             (DEST/'photos'/filename).write_bytes(jpeg)
             src='photos/'+filename
             row_key=row_keys.get(anchor.row+1)
-            if row_key: photos[name+'|'+row_key]=src
+            if row_key:
+                photos[name+'|'+row_key]=src
+                if name=='통합시트': photos['*|'+row_key]=src
     if not photos: raise RuntimeError('No spreadsheet photos extracted; keeping previous deployed site unchanged.')
     result={'updatedAt':datetime.now(timezone.utc).isoformat(),'photos':photos}
     (DEST/'photos.json').write_text(json.dumps(result,ensure_ascii=False),encoding='utf-8')
