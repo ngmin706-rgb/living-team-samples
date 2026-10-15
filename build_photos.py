@@ -15,15 +15,17 @@ def key(values):
 def main():
     DEST.mkdir(parents=True,exist_ok=True)
     (DEST/'photos').mkdir(exist_ok=True)
-    for attempt in range(3):
+    for attempt in range(5):
         try:
-            with urllib.request.urlopen(URL+'&t='+str(time.time_ns()), timeout=240) as response:
+            with urllib.request.urlopen(URL, timeout=180) as response:
                 payload=response.read()
             book=openpyxl.load_workbook(io.BytesIO(payload),data_only=True)
             break
-        except Exception:
-            if attempt==2: raise
-            time.sleep(5)
+        except Exception as error:
+            if attempt==4: raise
+            delay=10*(2**attempt)
+            print(f'Sheet download interrupted ({type(error).__name__}); retrying in {delay}s.', flush=True)
+            time.sleep(delay)
     photos={}
     for sheet in book:
         name=next((label for label in NAMES if label in sheet.title), None)
